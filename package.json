@@ -1,0 +1,20 @@
+{
+  "name": "dat-graph",
+  "version": "0.0.0",
+  "description": "Dat Merkle DAG",
+  "main": "index.js",
+  "dependencies": {
+    "hyperlog": "^4.6.0"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mafintosh/dat-graph.git"
+  },
+  "author": "Mathias Buus (@mafintosh)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mafintosh/dat-graph/issues"
+  },
+  "homepage": "https://github.com/mafintosh/dat-graph"
+}
