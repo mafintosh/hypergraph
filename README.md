@@ -71,12 +71,15 @@ stream.on('end', function () {
 ## On disk representation
 
 ```
+# append only log (to support changes feed)
 changes!1 => node-hash-1
 changes!2 => node-hash-2
 
+# graph nodes
 nodes!node-hash-1
 nodes!node-hash-2  => {links: [node-hash-1], value: {type: whatever, commit: commit-hash-2}}
 
+# commits (child of a graph node)
 commits!commit-hash-2!1!test
 commits!commit-hash-1!1!entry-one
 commits!commit-hash-1!2!entry-two
