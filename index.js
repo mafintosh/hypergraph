@@ -13,20 +13,25 @@ function DAG (db) {
   if (!(this instanceof DAG)) return new DAG(db)
 
   this.db = db
-  this.paths = []
-  this.flushedPaths = []
-  this.headPaths = []
+  this.logs = []
+  this.flushedLogs = []
+  this.headLogs = []
   this.inserting = ids()
 
   this.ready = thunky(init.bind(null, this))
 }
 
-DAG.prototype.count = function (cb) {
-  var self = this
-  this.ready(function (err) {
+DAG.prototype.count = function (opts, cb) {
+  if (typeof opts === 'function') return this.count(null, opts)
+  if (!opts) opts = {}
+
+  this.range(opts, function (err, since, until) {
     if (err) return cb(err)
     var sum = 0
-    for (var i = 0; i < self.flushedPaths.length; i++) sum += self.flushedPaths[i]
+    for (var i = 0; i < until.length; i++) {
+      if (i >= since.length) sum += until[i]
+      else if (until[i] > since[i]) sum += until[i] - since[i]
+    }
     process.nextTick(function () {
       cb(null, sum)
     })
@@ -66,14 +71,14 @@ DAG.prototype.heads = function (cb) {
     var missing = 0
     var nodes = []
 
-    for (var i = 0; i < self.headPaths.length; i++) {
-      if (!self.headPaths[i]) continue
-      push(i, self.headPaths[i])
+    for (var i = 0; i < self.headLogs.length; i++) {
+      if (!self.headLogs[i]) continue
+      push(i, self.headLogs[i])
     }
 
-    function push (path, seq) {
+    function push (log, seq) {
       missing++
-      getPathNode(self, path, seq, function (err, node) {
+      getLogNode(self, log, seq, function (err, node) {
         if (err) error = err
         else nodes.push(node)
         if (--missing) return
@@ -90,6 +95,44 @@ DAG.prototype.createReadStream = function (opts) {
 
 DAG.prototype.createWriteStream = function () {
   return new WriteStream(this)
+}
+
+DAG.prototype.range = function (opts, cb) {
+  if (!opts) opts = {}
+
+  var self = this
+  var since = opts.since || []
+  var until = opts.until || []
+
+  this.ready(function (err) {
+    if (err) return cb(err)
+    if (!since.length && !until.length) return cb(null, [], self.flushedLogs)
+
+    var error = null
+    var missing = since.length + until.length
+    var untilLogs = []
+    var sinceLogs = []
+
+    for (var i = 0; i < since.length; i++) self.get(toKey(since[i]), addSince)
+    for (var j = 0; j < until.length; j++) self.get(toKey(until[j]), addUntil)
+
+    function addSince (err, node) {
+      if (err) return cb(err)
+      addLogs(self, node, sinceLogs, check)
+    }
+
+    function addUntil (err, node) {
+      if (err) return cb(err)
+      addLogs(self, node, untilLogs, check)
+    }
+
+    function check (err) {
+      if (err) error = err
+      if (--missing) return
+      if (error) cb(error)
+      else cb(null, sinceLogs, untilLogs.length ? untilLogs : self.flushedLogs)
+    }
+  })
 }
 
 DAG.prototype.get = function (key, cb) {
@@ -114,7 +157,7 @@ DAG.prototype.add = function (links, value, cb) {
     links: links.map(toKey),
     value: value,
     sort: 0,
-    path: 0,
+    log: 0,
     seq: 0
   }
 
@@ -149,8 +192,8 @@ DAG.prototype.add = function (links, value, cb) {
       }
 
       function done (err) {
-        if (err) { // on batch error reset our path
-          if (node.seq) self.paths[node.path]--
+        if (err) { // on batch error reset our log
+          if (node.seq) self.logs[node.log]--
           self.inserting.remove(id)
           return cb(err)
         }
@@ -158,10 +201,10 @@ DAG.prototype.add = function (links, value, cb) {
         // update flushed caches
         for (var i = 0; i < links.length; i++) {
           var link = links[i]
-          if (self.headPaths[link.path] === link.seq) self.headPaths[link.path] = 0
+          if (self.headLogs[link.log] === link.seq) self.headLogs[link.log] = 0
         }
-        insert(self.headPaths, node.path, node.seq)
-        insert(self.flushedPaths, node.path, node.seq)
+        insert(self.headLogs, node.log, node.seq)
+        insert(self.flushedLogs, node.log, node.seq)
 
         self.inserting.remove(id)
         cb(null, node)
@@ -182,47 +225,47 @@ function compareNodes (a, b) {
 function updateNode (dag, node, links, cb) {
   for (var j = 0; j < links.length; j++) {
     // its very unlikely that this if will fire but it's here to prevent the head cache being messed up
-    if (dag.flushedPaths[node.path] < node.seq) return cb(new Error('Linked node is not flushed'))
+    if (dag.flushedLogs[node.log] < node.seq) return cb(new Error('Linked node is not flushed'))
     node.sort = Math.max(node.sort, links[j].sort + 1)
   }
 
-  if (links.length === 1 && dag.paths[links[0].path] === links[0].seq) {
-    // fast track - the single previous linked path was a head
-    node.path = links[0].path
-    node.seq = ++dag.paths[node.path]
+  if (links.length === 1 && dag.logs[links[0].log] === links[0].seq) {
+    // fast track - the single previous linked log was a head
+    node.log = links[0].log
+    node.seq = ++dag.logs[node.log]
     return cb(null, null)
   }
   if (!links.length) {
-    // no links - create a new path
-    node.path = dag.paths.length
+    // no links - create a new log
+    node.log = dag.logs.length
     node.seq = 1
-    dag.paths[node.path] = node.seq
+    dag.logs[node.log] = node.seq
     return cb(null, null)
   }
 
-  // slow(ish) track - do a path cache lookup
+  // slow(ish) track - do a log cache lookup
   updateNodeFromCache(dag, node, links, cb)
 }
 
 function updateNodeFromCache (dag, node, links, cb) {
-  getPaths(dag, links, function (err, paths) {
+  getLogs(dag, links, function (err, logs) {
     if (err) return cb(err)
 
-    for (var i = 0; i < paths.length; i++) {
-      if (dag.paths[i] === paths[i]) {
-        // linked path is a head - use that one
-        node.path = i
-        node.seq = dag.paths[i] = paths[i] + 1
-        return cb(null, paths)
+    for (var i = 0; i < logs.length; i++) {
+      if (dag.logs[i] === logs[i]) {
+        // linked log is a head - use that one
+        node.log = i
+        node.seq = dag.logs[i] = logs[i] + 1
+        return cb(null, logs)
       }
     }
 
-    // no linked path is a head - create a new path
-    node.path = dag.paths.length
+    // no linked log is a head - create a new log
+    node.log = dag.logs.length
     node.seq = 1
-    dag.paths[node.path] = node.seq
+    dag.logs[node.log] = node.seq
 
-    cb(null, paths)
+    cb(null, logs)
   })
 }
 
@@ -233,7 +276,7 @@ function createBatch (key, node, cache) {
   if (cache) {
     batch[offset++] = {
       type: 'put',
-      key: '!pathcache!' + node.path + '!' + pack(node.seq),
+      key: '!logcache!' + node.log + '!' + pack(node.seq),
       value: packArray(cache)
     }
   }
@@ -246,7 +289,7 @@ function createBatch (key, node, cache) {
 
   batch[offset++] ={
     type: 'put',
-    key: '!paths!' + node.path + '!' + pack(node.seq),
+    key: '!logs!' + node.log + '!' + pack(node.seq),
     value: node.key
   }
 
@@ -261,8 +304,8 @@ function init (dag, cb) {
     if (!prev) prev = '~'
 
     var opts = {
-      gt: '!paths!',
-      lt: '!paths!' + prev + '!',
+      gt: '!logs!',
+      lt: '!logs!' + prev + '!',
       valueAsBuffer: true,
       limit: 1,
       reverse: true
@@ -272,12 +315,12 @@ function init (dag, cb) {
     ite.next(function (err, key, val) {
       ite.end(noop)
       if (err) return cb(err)
-      if (!key) return addHeads(dag, dag.headPaths, done)
+      if (!key) return addHeads(dag, dag.headLogs, done)
       dag.get(val, function (err, node) {
         if (err) return cb(err)
-        addPaths(dag, node, dag.paths, function (err) {
+        addLogs(dag, node, dag.logs, function (err) {
           if (err) return cb(err)
-          run(node.path.toString())
+          run(node.log.toString())
         })
       })
     })
@@ -285,7 +328,7 @@ function init (dag, cb) {
 
   function done (err) {
     if (err) return cb(err)
-    dag.flushedPaths = dag.paths.slice(0) // copy
+    dag.flushedLogs = dag.logs.slice(0) // copy
     cb()
   }
 }
@@ -293,16 +336,23 @@ function init (dag, cb) {
 function noop () {}
 
 function toKey (node) {
-  if (Buffer.isBuffer(node) || typeof node === 'string') return node
+  if (Buffer.isBuffer(node)) return node
+  if (typeof node === 'string') return new Buffer(node, 'hex')
   return node.key
 }
 
 function containsHead (dag, nodes) {
   for (var i = 0; i < nodes.length ; i++) {
     var n = nodes[i]
-    if (dag.headPaths[n.path] === n.seq) return true
+    if (dag.headLogs[n.log] === n.seq) return true
   }
   return false
+}
+
+function toKey (key) {
+  if (Buffer.isBuffer(key)) return key
+  if (typeof key === 'string') return new Buffer(key, 'hex')
+  return key.key
 }
 
 function getNodes (dag, links, cb) {
@@ -324,31 +374,31 @@ function getNodes (dag, links, cb) {
 }
 
 function addHeads (dag, heads, cb) {
-  if (!dag.paths.length) return cb()
+  if (!dag.logs.length) return cb()
 
   var error = null
-  var missing = dag.paths.length
+  var missing = dag.logs.length
 
-  for (var i = 0; i < dag.paths.length; i++) heads[i] = 1
-  for (var j = 0; j < dag.paths.length; j++) checkNode(j, dag.paths[j], next)
+  for (var i = 0; i < dag.logs.length; i++) heads[i] = 1
+  for (var j = 0; j < dag.logs.length; j++) checkNode(j, dag.logs[j], next)
 
   function next (err) {
     if (err) error = err
     if (--missing) return
     for (var i = 0; i < heads.length; i++) {
-      if (heads[i]) heads[i] = dag.paths[i]
+      if (heads[i]) heads[i] = dag.logs[i]
     }
     cb(error)
   }
 
-  function checkNode (path, seq, cb) {
-    var paths = []
-    getPathNode(dag, path, seq, function (err, node) {
+  function checkNode (log, seq, cb) {
+    var logs = []
+    getLogNode(dag, log, seq, function (err, node) {
       if (err) return cb(err)
-      addPaths(dag, node, paths, function (err) {
+      addLogs(dag, node, logs, function (err) {
         if (err) return cb(err)
-        for (var i = 0; i < paths.length; i++) {
-          if (paths[i] === dag.paths[i] && path !== i) heads[i] = 0
+        for (var i = 0; i < logs.length; i++) {
+          if (logs[i] === dag.logs[i] && log !== i) heads[i] = 0
         }
         cb()
       })
@@ -356,32 +406,32 @@ function addHeads (dag, heads, cb) {
   }
 }
 
-function getPathNode (dag, path, seq, cb) {
-  dag.db.get('!paths!' + path + '!' + pack(seq), {valueEncoding: 'binary'}, function (err, key) {
+function getLogNode (dag, log, seq, cb) {
+  dag.db.get('!logs!' + log + '!' + pack(seq), {valueEncoding: 'binary'}, function (err, key) {
     if (err) return cb(err)
     dag.get(key, cb)
   })
 }
 
-function getPaths (dag, nodes, cb) {
+function getLogs (dag, nodes, cb) {
   if (!nodes.length) return cb(null, [])
 
-  var paths = []
+  var logs = []
   var missing = nodes.length
   var error = null
 
-  for (var i = 0; i < nodes.length; i++) addPaths(dag, nodes[i], paths, next)
+  for (var i = 0; i < nodes.length; i++) addLogs(dag, nodes[i], logs, next)
 
   function next (err) {
     if (err) error = err
     if (--missing) return
     if (error) cb(error)
-    else cb(null, paths)
+    else cb(null, logs)
   }
 }
 
-function addPaths (dag, node, paths, cb) {
-  var prefix = '!pathcache!' + node.path + '!'
+function addLogs (dag, node, logs, cb) {
+  var prefix = '!logcache!' + node.log + '!'
   var opts = {
     gt: prefix,
     lte: prefix + pack(node.seq),
@@ -390,7 +440,7 @@ function addPaths (dag, node, paths, cb) {
     reverse: true
   }
 
-  insert(paths, node.path, node.seq)
+  insert(logs, node.log, node.seq)
 
   var ite = dag.db.db.iterator(opts)
   ite.next(function (err, key, val) {
@@ -400,15 +450,15 @@ function addPaths (dag, node, paths, cb) {
     if (!val) return cb(null)
 
     var prev = unpackArray(val)
-    for (var i = 0; i < prev.length; i++) insert(paths, i, prev[i])
+    for (var i = 0; i < prev.length; i++) insert(logs, i, prev[i])
 
     cb(null)
   })
 }
 
-function insert (paths, id, seq) {
-  for (var i = paths.length; i <= id; i++) paths[i] = 0
-  paths[id] = Math.max(seq, paths[id])
+function insert (logs, id, seq) {
+  for (var i = logs.length; i <= id; i++) logs[i] = 0
+  logs[id] = Math.max(seq, logs[id])
 }
 
 function unpackArray (buf) {
