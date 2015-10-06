@@ -48,7 +48,7 @@ DAG.prototype.match = function (hashes, cb) {
   var missing = hashes.length
   var error = null
 
-  for (var i = 0; i < hashes.length; i++) self.get(hashes[i], check(i))
+  for (var i = 0; i < hashes.length; i++) this.get(hashes[i], check(i))
 
   function check (i) {
     return function (err, node) {
@@ -281,13 +281,13 @@ function createBatch (key, node, cache) {
     }
   }
 
-  batch[offset++] ={
+  batch[offset++] = {
     type: 'put',
     key: '!nodes!' + key,
     value: messages.Node.encode(node)
   }
 
-  batch[offset++] ={
+  batch[offset++] = {
     type: 'put',
     key: '!logs!' + node.log + '!' + pack(node.seq),
     value: node.key
