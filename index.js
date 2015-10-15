@@ -144,7 +144,6 @@ DAG.prototype.get = function (key, cb) {
 DAG.prototype.append = function (value, cb) {
   var self = this
   this.heads(function (err, links) {
-      console.log('??')
     if (err) return cb(err)
     self.add(links, value, cb)
   })
