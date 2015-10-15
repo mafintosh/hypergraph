@@ -66,7 +66,7 @@ DAG.prototype.heads = function (cb) {
   var self = this
   this.ready(function (err) {
     if (err) return cb(err)
-    if (self.headLogs.length) return cb(null, [])
+    if (!self.headLogs.length) return cb(null, [])
 
     var error = null
     var missing = 0
