@@ -459,7 +459,7 @@ function addLogs (dag, node, logs, cb) {
 }
 
 function insert (logs, id, seq) {
-  for (var i = logs.length; i <= id; i++) logs[i] = 0
+  for (var i = logs.length; i <= id; i++) logs[i] = 0 // TODO needs comment
   logs[id] = Math.max(seq, logs[id])
 }
 

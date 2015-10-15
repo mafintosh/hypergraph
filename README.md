@@ -6,84 +6,60 @@ WORK IN PROGRESS
 npm install dat-graph
 ```
 
-## Usage
+## API
 
-``` js
-var datGraph = require('dat-graph')
-var graph = datGraph(db) // db is a levelup instance
+### var dg = graph(levelup)
 
-var stream = graph.addStream([], function (err, node) {
-  console.log('inserted', node) // {links: [], value: (hash of the below writes)}
+creates a new graph from a levelup
 
-  var anotherStream = graph.addStream([node], function (err) {
+### Range Options
 
-  })
+Various methods use these options for specifying ranges in the graph:
 
-  anotherStream.write(new Buffer('test'))
-})
+**since** - array of nodes to begin the range
+**until** - array of nodes to end the range
 
-stream.write(new Buffer('entry one'))
-stream.write(new Buffer('entry two'))
-stream.end()
-```
+### dg.range(opts, cb)
 
-The above results in
+Returns the nodes between the ranges you pass in to `opts`
 
-```
-node #2 (-> hash of "test")
- |
-node #1 (-> hash of ("entry one", "entry two"))
-```
+`opts` should be Range Options
 
-``` js
-var stream = graph.getStream(nodeHash)
+All nodes between `since` and `until` will be returned to `cb`
 
-stream.on('data', function (data) {
-  // data is entry one, then entry two
-})
+### dg.count(opts, cb)
 
-var stream = graph.nodeStream()
+Get the total number of nodes between a range. Calls `cb` with the node count for the range you specify
 
-stream.on('data', function (node) {
-  // returns node #1, node #2
-})
+`opts` should be Range Options.
 
-graph.heads(function (err, heads) {
-  // returns the heads of the graph
-})
+### dg.match(hashes, cb)
 
-graph.get(nodeHash, function (err, node) {
-  // returns the graph node
-})
+Given an array of hashes, calls `cb` with the hashes that exist in the local graph
 
-var stream = graph.replicate({mode: 'push'})
+### dg.heads(cb)
 
-stream.on('end', function () {
-  var stream = graph.eventStream({since: 5})
+Calls `cb` with an array of the current heads of the graph
 
-  stream.on('data', function (data) {
-    // {start: date, end: date, sen}
-  })
-})
+### dg.createReadStream(opts)
 
-```
+Returns a readable stream that will emit graph nodes. `opts` should be Range Options
 
-## On disk representation
+### dg.createWriteStream()
 
-```
-# append only log (to support changes feed)
-changes!1 => node-hash-1
-changes!2 => node-hash-2
+Returns a writable stream that stores data in the graph
 
-# graph nodes
-nodes!node-hash-1
-nodes!node-hash-2  => {links: [node-hash-1], value: {type: whatever, commit: commit-hash-2}}
+### dg.get(key, cb)
 
-# commits (child of a graph node)
-commits!commit-hash-2!1!test
-commits!commit-hash-1!1!entry-one
-commits!commit-hash-1!2!entry-two
-```
+Gets the value for a key in the graph, calls `cb` with the value
+
+### dg.append(value, cb)
+
+Appends `value` to the current head, calls `cb` when done. Uses `.add` internally.
+
+### dg.add(links, value, cb)
+
+Inserts `value` into the graph as a child of `links`, calls `cb` when done.
 
 ## License
 
