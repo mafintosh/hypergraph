@@ -7,6 +7,7 @@ var lexint = require('lexicographic-integer')
 var thunky = require('thunky')
 var varint = require('varint')
 var ids = require('numeric-id-map')
+var debug = require('debug')('dat-graph')
 
 module.exports = DAG
 
@@ -71,12 +72,15 @@ DAG.prototype.heads = function (cb) {
     var error = null
     var missing = 0
     var nodes = []
+      
+    // if there are no heads
+    if (self.headLogs.length === 0) return cb(null, null)
 
     for (var i = 0; i < self.headLogs.length; i++) {
       if (!self.headLogs[i]) continue
       push(i, self.headLogs[i])
     }
-
+    
     function push (log, seq) {
       missing++
       getLogNode(self, log, seq, function (err, node) {
@@ -84,7 +88,9 @@ DAG.prototype.heads = function (cb) {
         else nodes.push(node)
         if (--missing) return
         if (error) return cb(error)
-        cb(null, nodes.sort(compareNodes))
+        var heads = nodes.sort(compareNodes)
+        debug('heads', heads)
+        cb(null, heads)
       })
     }
   })
@@ -138,9 +144,11 @@ DAG.prototype.range = function (opts, cb) {
 }
 
 DAG.prototype.get = function (key, cb) {
+  debug('get', key)
   this.db.get('!nodes!' + key.toString('hex'), {valueEncoding: messages.Node}, cb)
 }
 
+// TODO we should check that value is a valid value and throw
 DAG.prototype.append = function (value, cb) {
   var self = this
   this.heads(function (err, links) {
@@ -170,7 +178,6 @@ DAG.prototype.add = function (links, value, cb) {
 
   this.ready(function ready (err) {
     if (err) return cb(err)
-
     getNodes(self, node.links, function (err, links) {
       if (err) return cb(err)
 
