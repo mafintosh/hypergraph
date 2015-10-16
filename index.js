@@ -67,20 +67,19 @@ DAG.prototype.heads = function (cb) {
   var self = this
   this.ready(function (err) {
     if (err) return cb(err)
+
+    // if there are no heads
     if (!self.headLogs.length) return cb(null, [])
 
     var error = null
     var missing = 0
     var nodes = []
-      
-    // if there are no heads
-    if (self.headLogs.length === 0) return cb(null, null)
 
     for (var i = 0; i < self.headLogs.length; i++) {
       if (!self.headLogs[i]) continue
       push(i, self.headLogs[i])
     }
-    
+
     function push (log, seq) {
       missing++
       getLogNode(self, log, seq, function (err, node) {
