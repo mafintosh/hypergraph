@@ -29,6 +29,20 @@ test('.add and .get', function (t) {
   })
 })
 
+test('.add and .heads', function (t) {
+  var dg = newDag()
+  var testBuf = new Buffer('dorsey')
+  dg.add(null, testBuf, function (err, node1) {
+    if (err) return t.ifError(err, 'should not have err')
+    dg.heads(function (err, heads) {
+      if (err) return t.ifError(err, 'should not have err')
+      t.equal(heads.length, 1, 'has 1 head')
+      t.equal(node1.key.toString('hex'), heads[0].key.toString('hex'), 'key is head')
+      dg.close(t.end)
+    })
+  })
+})
+
 function newDag () {
   rimraf.sync('./testdb')
   var db = level('./testdb')
