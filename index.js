@@ -2,7 +2,8 @@ var hash = require('./lib/hash')
 var messages = require('./lib/messages')
 var ReadStream = require('./lib/read-stream')
 var WriteStream = require('./lib/write-stream')
-var BisectStream = require('./lib/bisect-stream')
+var DiffStream = require('./lib/diff-stream')
+var MatchStream = require('./lib/match-stream')
 var lexint = require('lexicographic-integer')
 var thunky = require('thunky')
 var varint = require('varint')
@@ -44,9 +45,12 @@ DAG.prototype.close = function (cb) {
   this.db.close(cb)
 }
 
-// TODO: this name seems leaky - find a better one?
-DAG.prototype.createBisectStream = function () {
-  return new BisectStream(this)
+DAG.prototype.createDiffStream = function () {
+  return new DiffStream(this)
+}
+
+DAG.prototype.createMatchStream = function () {
+  return new MatchStream(this)
 }
 
 DAG.prototype.match = function (hashes, cb) {
