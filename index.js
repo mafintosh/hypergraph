@@ -40,6 +40,10 @@ DAG.prototype.count = function (opts, cb) {
   })
 }
 
+DAG.prototype.close = function (cb) {
+  this.db.close(cb)
+}
+
 // TODO: this name seems leaky - find a better one?
 DAG.prototype.createBisectStream = function () {
   return new BisectStream(this)

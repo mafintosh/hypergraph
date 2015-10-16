@@ -61,6 +61,10 @@ Appends `value` to the current head, calls `cb` when done. Uses `.add` internall
 
 Inserts `value` into the graph as a child of `links`, calls `cb` when done.
 
+### dg.close(cb)
+
+Calls close on the underlying `dg.db`
+
 ## License
 
 MIT
