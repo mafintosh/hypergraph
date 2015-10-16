@@ -43,6 +43,42 @@ test('.add and .heads', function (t) {
   })
 })
 
+test('.createWriteStream and .count', function (t) {
+  var dg = newDag()
+  writeSomeBros(dg, function () {
+    dg.count(function (err, count) {
+      if (err) return t.ifError(err, 'should not have err')
+      t.equal(count, 3, '3 bros')
+      dg.close(t.end)
+    })
+  })
+})
+
+test('.createWriteStream and .createReadStream', function (t) {
+  var dg = newDag()
+  writeSomeBros(dg, function () {
+    var count = 0
+    var rs = dg.createReadStream()
+    rs.on('data', function (node) {
+      count += 1
+    })
+    rs.on('end', function () {
+      t.equal(count, 3, '3 data events')
+      dg.close(t.end)
+    })
+    rs.on('error', function (err) {
+      t.error(err, 'should not error')
+    })
+  })
+})
+
+function writeSomeBros (dg, cb) {
+  var ws = dg.createWriteStream()
+  var bros = [new Buffer('zuckerberg'), new Buffer('dorsey'), new Buffer('ballmer')]
+  for (var i = 0; i < bros.length; i ++) ws.write({value: bros[i]})
+  ws.end(cb)
+}
+
 function newDag () {
   rimraf.sync('./testdb')
   var db = level('./testdb')
