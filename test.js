@@ -1,7 +1,6 @@
-var test = require('tape')
-var level = require('level')
-var rimraf = require('rimraf')
 var DAG = require('./')
+var test = require('tape')
+var memdb = require('memdb')
 
 test('.append and .get', function (t) {
   var dg = newDag()
@@ -80,9 +79,7 @@ function writeSomeBros (dg, cb) {
 }
 
 function newDag () {
-  rimraf.sync('./testdb')
-  var db = level('./testdb')
-  return DAG(db)
+  return DAG(memdb())
 }
 
 // { key: <Buffer 12 91 e8 9e ee a5 aa e9 bb f8 3e 4d e7 bc 62 77 99 53 1c 47 c5 a8 54 42 c6 82 5e 09 b7 64 fe 91>,

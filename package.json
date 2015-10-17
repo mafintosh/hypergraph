@@ -17,7 +17,7 @@
     "varint": "^4.0.0"
   },
   "devDependencies": {
-    "level": "^1.3.0",
+    "memdb": "^1.0.1",
     "tape": "^4.2.1"
   },
   "scripts": {
