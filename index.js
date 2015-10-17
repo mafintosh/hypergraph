@@ -62,7 +62,7 @@ DAG.prototype.match = function (hashes, cb) {
 
   function check (i) {
     return function (err, node) {
-      if (err) error = err
+      if (err && !err.notFound) error = err
       if (node) matches.push(i)
       if (--missing) return
       if (error) cb(error)
