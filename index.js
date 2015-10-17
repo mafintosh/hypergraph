@@ -107,8 +107,8 @@ DAG.prototype.createReadStream = function (opts) {
   return new ReadStream(this, opts)
 }
 
-DAG.prototype.createWriteStream = function () {
-  return new WriteStream(this)
+DAG.prototype.createWriteStream = function (opts) {
+  return new WriteStream(this, opts)
 }
 
 DAG.prototype.range = function (opts, cb) {
@@ -148,6 +148,10 @@ DAG.prototype.range = function (opts, cb) {
       else cb(null, sinceLogs, untilLogs.length ? untilLogs : self.flushedLogs)
     }
   })
+}
+
+DAG.prototype.compressRange = function (keys) {
+
 }
 
 DAG.prototype.get = function (key, cb) {
