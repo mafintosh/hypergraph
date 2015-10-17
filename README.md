@@ -21,14 +21,6 @@ Various methods use these options for specifying ranges in the graph:
 **since** - array of nodes to begin the range
 **until** - array of nodes to end the range
 
-### dg.range(opts, cb)
-
-Returns the nodes between the ranges you pass in to `opts`
-
-`opts` should be Range Options
-
-All nodes between `since` and `until` will be returned to `cb`
-
 ### dg.count(opts, cb)
 
 Get the total number of nodes between a range. Calls `cb` with the node count for the range you specify
