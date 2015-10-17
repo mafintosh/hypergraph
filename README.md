@@ -6,6 +6,8 @@ WORK IN PROGRESS
 npm install dat-graph
 ```
 
+[![build status](http://img.shields.io/travis/mafintosh/dat-graph.svg?style=flat)](http://travis-ci.org/mafintosh/dat-graph)
+
 ## API
 
 ### var dg = graph(levelup)
