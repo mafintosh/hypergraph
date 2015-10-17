@@ -71,6 +71,81 @@ test('.createWriteStream and .createReadStream', function (t) {
   })
 })
 
+test('.createDiffStream empty diff', function (t) {
+  var dg = newDag()
+  var empty = newDag()
+  writeSomeBros(dg, function () {
+    var diff = empty.createDiffStream()
+    diff.pipe(dg.createMatchStream()).pipe(diff)
+    diff.on('end', function () {
+      t.same(diff.since, [], 'empty since')
+      t.end()
+    })
+  })
+})
+
+test('.createDiffStream empty match', function (t) {
+  var dg = newDag()
+  var empty = newDag()
+  writeSomeBros(dg, function () {
+    var diff = dg.createDiffStream()
+    diff.pipe(empty.createMatchStream()).pipe(diff)
+    diff.on('end', function () {
+      t.same(diff.since, [], 'empty since')
+      t.end()
+    })
+  })
+})
+
+test('.createDiffStream same diff and match', function (t) {
+  var dg = newDag()
+  writeSomeBros(dg, function () {
+    var diff = dg.createDiffStream()
+    diff.pipe(dg.createMatchStream()).pipe(diff)
+    diff.on('end', function () {
+      dg.heads(function (_, heads) {
+        heads = heads.map(function (node) {
+          return node.key
+        })
+        t.same(diff.since.sort(), heads.sort(), 'empty since')
+        t.end()
+      })
+    })
+  })
+})
+
+test('.createDiffStream different sets', function (t) {
+  var dg = newDag()
+  var other = newDag()
+
+  other.append('allen', function () {
+    writeSomeBros(dg, function () {
+      var diff = dg.createDiffStream()
+      diff.pipe(other.createMatchStream()).pipe(diff)
+      diff.on('end', function () {
+        t.same(diff.since, [], 'empty since')
+        t.end()
+      })
+    })
+  })
+})
+
+test('.createDiffStream partial match', function (t) {
+  var dg = newDag()
+  var other = newDag()
+
+  other.append('zuckerberg', function (_, node) {
+    writeSomeBros(dg, function () {
+      var diff = dg.createDiffStream()
+      diff.pipe(other.createMatchStream()).pipe(diff)
+      diff.on('end', function () {
+        t.same(diff.since, [node.key], 'contains zuck')
+        t.end()
+      })
+    })
+  })
+})
+
 function writeSomeBros (dg, cb) {
   var ws = dg.createWriteStream()
   var bros = [new Buffer('zuckerberg'), new Buffer('dorsey'), new Buffer('ballmer')]
