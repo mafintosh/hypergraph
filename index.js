@@ -28,7 +28,7 @@ DAG.prototype.count = function (opts, cb) {
   if (typeof opts === 'function') return this.count(null, opts)
   if (!opts) opts = {}
 
-  this.range(opts, function (err, since, until) {
+  this._range(opts, function (err, since, until) {
     if (err) return cb(err)
     var sum = 0
     for (var i = 0; i < until.length; i++) {
@@ -111,49 +111,6 @@ DAG.prototype.createWriteStream = function (opts) {
   return new WriteStream(this, opts)
 }
 
-DAG.prototype.range = function (opts, cb) {
-  if (typeof opts === 'function') return this.range(null, opts)
-  if (!opts) opts = {}
-
-  var self = this
-  var since = opts.since || []
-  var until = opts.until || []
-
-  this.ready(function (err) {
-    if (err) return cb(err)
-    if (!since.length && !until.length) return cb(null, [], self.flushedLogs)
-
-    var error = null
-    var missing = since.length + until.length
-    var untilLogs = []
-    var sinceLogs = []
-
-    for (var i = 0; i < since.length; i++) self.get(toKey(since[i]), addSince)
-    for (var j = 0; j < until.length; j++) self.get(toKey(until[j]), addUntil)
-
-    function addSince (err, node) {
-      if (err) return cb(err)
-      addLogs(self, node, sinceLogs, check)
-    }
-
-    function addUntil (err, node) {
-      if (err) return cb(err)
-      addLogs(self, node, untilLogs, check)
-    }
-
-    function check (err) {
-      if (err) error = err
-      if (--missing) return
-      if (error) cb(error)
-      else cb(null, sinceLogs, untilLogs.length ? untilLogs : self.flushedLogs)
-    }
-  })
-}
-
-DAG.prototype.compressRange = function (keys) {
-
-}
-
 DAG.prototype.get = function (key, cb) {
   debug('get', key)
   this.db.get('!nodes!' + key.toString('hex'), {valueEncoding: messages.Node}, cb)
@@ -230,6 +187,45 @@ DAG.prototype.add = function (links, value, cb) {
         cb(null, node)
       }
     })
+  })
+}
+
+DAG.prototype._range = function (opts, cb) {
+  if (typeof opts === 'function') return this._range(null, opts)
+  if (!opts) opts = {}
+
+  var self = this
+  var since = opts.since || []
+  var until = opts.until || []
+
+  this.ready(function (err) {
+    if (err) return cb(err)
+    if (!since.length && !until.length) return cb(null, [], self.flushedLogs)
+
+    var error = null
+    var missing = since.length + until.length
+    var untilLogs = []
+    var sinceLogs = []
+
+    for (var i = 0; i < since.length; i++) self.get(toKey(since[i]), addSince)
+    for (var j = 0; j < until.length; j++) self.get(toKey(until[j]), addUntil)
+
+    function addSince (err, node) {
+      if (err) return cb(err)
+      addLogs(self, node, sinceLogs, check)
+    }
+
+    function addUntil (err, node) {
+      if (err) return cb(err)
+      addLogs(self, node, untilLogs, check)
+    }
+
+    function check (err) {
+      if (err) error = err
+      if (--missing) return
+      if (error) cb(error)
+      else cb(null, sinceLogs, untilLogs.length ? untilLogs : self.flushedLogs)
+    }
   })
 }
 
