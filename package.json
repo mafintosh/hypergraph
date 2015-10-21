@@ -1,6 +1,6 @@
 {
   "name": "dat-graph",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Dat Merkle DAG",
   "main": "index.js",
   "dependencies": {
