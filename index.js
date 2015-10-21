@@ -364,14 +364,8 @@ function init (dag, cb) {
 
 function noop () {}
 
-function toKey (node) {
-  if (Buffer.isBuffer(node)) return node
-  if (typeof node === 'string') return new Buffer(node, 'hex')
-  return node.key
-}
-
 function containsHead (dag, nodes) {
-  for (var i = 0; i < nodes.length ; i++) {
+  for (var i = 0; i < nodes.length; i++) {
     var n = nodes[i]
     if (dag.headPaths[n.path] === n.seq) return true
   }

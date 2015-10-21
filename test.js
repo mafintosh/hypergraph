@@ -149,7 +149,7 @@ test('.createDiffStream partial match', function (t) {
 function writeSomeBros (dg, cb) {
   var ws = dg.createWriteStream()
   var bros = [new Buffer('zuckerberg'), new Buffer('dorsey'), new Buffer('ballmer')]
-  for (var i = 0; i < bros.length; i ++) ws.write({value: bros[i]})
+  for (var i = 0; i < bros.length; i++) ws.write({value: bros[i]})
   ws.end(cb)
 }
 
