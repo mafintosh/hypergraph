@@ -45,12 +45,12 @@ DAG.prototype.close = function (cb) {
   this.db.close(cb)
 }
 
-DAG.prototype.createDiffStream = function () {
-  return new DiffStream(this)
+DAG.prototype.createDiffStream = function (opts) {
+  return new DiffStream(this, opts)
 }
 
-DAG.prototype.createMatchStream = function () {
-  return new MatchStream(this)
+DAG.prototype.createMatchStream = function (opts) {
+  return new MatchStream(this, opts)
 }
 
 DAG.prototype.match = function (hashes, cb) {
