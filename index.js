@@ -229,6 +229,19 @@ DAG.prototype._range = function (opts, cb) {
   })
 }
 
+DAG.prototype._heads = function (key, cb) {
+  var self = this
+  var links = []
+
+  this.get(key, function (err, node) {
+    if (err) return cb(err)
+    addPaths(self, node, links, function (err) {
+      if (err) return cb(err)
+      cb(null, links)
+    })
+  })
+}
+
 function compareNodes (a, b) {
   var len = Math.min(a.key.length, b.key.length) // future proofing
   for (var i = 0; i < len; i++) {
