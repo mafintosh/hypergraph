@@ -2,6 +2,7 @@ var hash = require('./lib/hash')
 var messages = require('./lib/messages')
 var ReadStream = require('./lib/read-stream')
 var WriteStream = require('./lib/write-stream')
+var AppendStream = require('./lib/append-stream')
 var DiffStream = require('./lib/diff-stream')
 var MatchStream = require('./lib/match-stream')
 var lexint = require('lexicographic-integer')
@@ -109,6 +110,10 @@ DAG.prototype.createReadStream = function (opts) {
 
 DAG.prototype.createWriteStream = function (opts) {
   return new WriteStream(this, opts)
+}
+
+DAG.prototype.createAppendStream = function (opts) {
+  return new AppendStream(this, opts)
 }
 
 DAG.prototype.get = function (key, cb) {
