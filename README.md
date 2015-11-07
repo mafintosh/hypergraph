@@ -1,6 +1,6 @@
 # hypergraph
 
-A Merkle DAG
+Yet another Merkle DAG
 
 ```
 npm install hypergraph

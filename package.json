@@ -1,7 +1,7 @@
 {
   "name": "hypergraph",
   "version": "1.0.2",
-  "description": "A Merkle DAG",
+  "description": "Yet another Merkle DAG",
   "main": "index.js",
   "dependencies": {
     "debug": "^2.2.0",
