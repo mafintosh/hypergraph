@@ -9,7 +9,7 @@ var lexint = require('lexicographic-integer')
 var thunky = require('thunky')
 var varint = require('varint')
 var ids = require('numeric-id-map')
-var debug = require('debug')('dat-graph')
+var debug = require('debug')('hypergraph')
 
 module.exports = DAG
 

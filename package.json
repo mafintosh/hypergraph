@@ -1,7 +1,7 @@
 {
-  "name": "dat-graph",
+  "name": "hypergraph",
   "version": "1.0.2",
-  "description": "Dat Merkle DAG",
+  "description": "A Merkle DAG",
   "main": "index.js",
   "dependencies": {
     "debug": "^2.2.0",
@@ -26,12 +26,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/mafintosh/dat-graph.git"
+    "url": "https://github.com/mafintosh/hypergraph.git"
   },
   "author": "Mathias Buus (@mafintosh)",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mafintosh/dat-graph/issues"
+    "url": "https://github.com/mafintosh/hypergraph/issues"
   },
-  "homepage": "https://github.com/mafintosh/dat-graph"
+  "homepage": "https://github.com/mafintosh/hypergraph"
 }

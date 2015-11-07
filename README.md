@@ -1,16 +1,16 @@
-# dat-graph
+# hypergraph
 
-WORK IN PROGRESS
+A Merkle DAG
 
 ```
-npm install dat-graph
+npm install hypergraph
 ```
 
-[![build status](http://img.shields.io/travis/mafintosh/dat-graph.svg?style=flat)](http://travis-ci.org/mafintosh/dat-graph)
+[![build status](http://img.shields.io/travis/mafintosh/hypergraph.svg?style=flat)](http://travis-ci.org/mafintosh/hypergraph)
 
 ## API
 
-### var dg = graph(levelup)
+### var graph = hypergraph(levelup)
 
 creates a new graph from a levelup
 
@@ -21,43 +21,43 @@ Various methods use these options for specifying ranges in the graph:
 **since** - array of nodes to begin the range
 **until** - array of nodes to end the range
 
-### dg.count(opts, cb)
+### graph.count(opts, cb)
 
 Get the total number of nodes between a range. Calls `cb` with the node count for the range you specify
 
 `opts` should be Range Options.
 
-### dg.match(hashes, cb)
+### graph.match(hashes, cb)
 
 Given an array of hashes, calls `cb` with the hashes that exist in the local graph
 
-### dg.heads(cb)
+### graph.heads(cb)
 
 Calls `cb` with an array of the current heads of the graph
 
-### dg.createReadStream(opts)
+### graph.createReadStream(opts)
 
 Returns a readable stream that will emit graph nodes. `opts` should be Range Options
 
-### dg.createWriteStream()
+### graph.createWriteStream()
 
 Returns a writable stream that stores data in the graph
 
-### dg.get(key, cb)
+### graph.get(key, cb)
 
 Gets the value for a key in the graph, calls `cb` with the value
 
-### dg.append(value, cb)
+### graph.append(value, cb)
 
 Appends `value` to the current head, calls `cb` when done. Uses `.add` internally.
 
-### dg.add(links, value, cb)
+### graph.add(links, value, cb)
 
 Inserts `value` into the graph as a child of `links`, calls `cb` when done.
 
-### dg.close(cb)
+### graph.close(cb)
 
-Calls close on the underlying `dg.db`
+Calls close on the underlying `graph.db`
 
 ## License
 

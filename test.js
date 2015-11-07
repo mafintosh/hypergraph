@@ -3,67 +3,67 @@ var test = require('tape')
 var memdb = require('memdb')
 
 test('.append and .get', function (t) {
-  var dg = newDag()
+  var graph = newDag()
   var testBuf = new Buffer('zuckerberg')
-  dg.append(testBuf, function (err, node1) {
+  graph.append(testBuf, function (err, node1) {
     if (err) return t.ifError(err, 'should not have err')
-    dg.get(node1.key, function (err, node2) {
+    graph.get(node1.key, function (err, node2) {
       if (err) return t.ifError(err, 'should not have err')
       t.equal(node1.key.toString(), node2.key.toString(), 'keys match')
-      dg.close(t.end)
+      graph.close(t.end)
     })
   })
 })
 
 test('.add and .get', function (t) {
-  var dg = newDag()
+  var graph = newDag()
   var testBuf = new Buffer('ballmer')
-  dg.add(null, testBuf, function (err, node1) {
+  graph.add(null, testBuf, function (err, node1) {
     if (err) return t.ifError(err, 'should not have err')
-    dg.get(node1.key, function (err, node2) {
+    graph.get(node1.key, function (err, node2) {
       if (err) return t.ifError(err, 'should not have err')
       t.equal(node1.key.toString(), node2.key.toString(), 'keys match')
-      dg.close(t.end)
+      graph.close(t.end)
     })
   })
 })
 
 test('.add and .heads', function (t) {
-  var dg = newDag()
+  var graph = newDag()
   var testBuf = new Buffer('dorsey')
-  dg.add(null, testBuf, function (err, node1) {
+  graph.add(null, testBuf, function (err, node1) {
     if (err) return t.ifError(err, 'should not have err')
-    dg.heads(function (err, heads) {
+    graph.heads(function (err, heads) {
       if (err) return t.ifError(err, 'should not have err')
       t.equal(heads.length, 1, 'has 1 head')
       t.equal(node1.key.toString('hex'), heads[0].key.toString('hex'), 'key is head')
-      dg.close(t.end)
+      graph.close(t.end)
     })
   })
 })
 
 test('.createWriteStream and .count', function (t) {
-  var dg = newDag()
-  writeSomeBros(dg, function () {
-    dg.count(function (err, count) {
+  var graph = newDag()
+  writeSomeBros(graph, function () {
+    graph.count(function (err, count) {
       if (err) return t.ifError(err, 'should not have err')
       t.equal(count, 3, '3 bros')
-      dg.close(t.end)
+      graph.close(t.end)
     })
   })
 })
 
 test('.createWriteStream and .createReadStream', function (t) {
-  var dg = newDag()
-  writeSomeBros(dg, function () {
+  var graph = newDag()
+  writeSomeBros(graph, function () {
     var count = 0
-    var rs = dg.createReadStream()
+    var rs = graph.createReadStream()
     rs.on('data', function (node) {
       count += 1
     })
     rs.on('end', function () {
       t.equal(count, 3, '3 data events')
-      dg.close(t.end)
+      graph.close(t.end)
     })
     rs.on('error', function (err) {
       t.error(err, 'should not error')
@@ -72,11 +72,11 @@ test('.createWriteStream and .createReadStream', function (t) {
 })
 
 test('.createDiffStream empty diff', function (t) {
-  var dg = newDag()
+  var graph = newDag()
   var empty = newDag()
-  writeSomeBros(dg, function () {
+  writeSomeBros(graph, function () {
     var diff = empty.createDiffStream()
-    diff.pipe(dg.createMatchStream()).pipe(diff)
+    diff.pipe(graph.createMatchStream()).pipe(diff)
     diff.on('end', function () {
       t.same(diff.since, [], 'empty since')
       t.end()
@@ -85,10 +85,10 @@ test('.createDiffStream empty diff', function (t) {
 })
 
 test('.createDiffStream empty match', function (t) {
-  var dg = newDag()
+  var graph = newDag()
   var empty = newDag()
-  writeSomeBros(dg, function () {
-    var diff = dg.createDiffStream()
+  writeSomeBros(graph, function () {
+    var diff = graph.createDiffStream()
     diff.pipe(empty.createMatchStream()).pipe(diff)
     diff.on('end', function () {
       t.same(diff.since, [], 'empty since')
@@ -98,12 +98,12 @@ test('.createDiffStream empty match', function (t) {
 })
 
 test('.createDiffStream same diff and match', function (t) {
-  var dg = newDag()
-  writeSomeBros(dg, function () {
-    var diff = dg.createDiffStream()
-    diff.pipe(dg.createMatchStream()).pipe(diff)
+  var graph = newDag()
+  writeSomeBros(graph, function () {
+    var diff = graph.createDiffStream()
+    diff.pipe(graph.createMatchStream()).pipe(diff)
     diff.on('end', function () {
-      dg.heads(function (_, heads) {
+      graph.heads(function (_, heads) {
         heads = heads.map(function (node) {
           return node.key
         })
@@ -115,12 +115,12 @@ test('.createDiffStream same diff and match', function (t) {
 })
 
 test('.createDiffStream different sets', function (t) {
-  var dg = newDag()
+  var graph = newDag()
   var other = newDag()
 
   other.append('allen', function () {
-    writeSomeBros(dg, function () {
-      var diff = dg.createDiffStream()
+    writeSomeBros(graph, function () {
+      var diff = graph.createDiffStream()
       diff.pipe(other.createMatchStream()).pipe(diff)
       diff.on('end', function () {
         t.same(diff.since, [], 'empty since')
@@ -131,12 +131,12 @@ test('.createDiffStream different sets', function (t) {
 })
 
 test('.createDiffStream partial match', function (t) {
-  var dg = newDag()
+  var graph = newDag()
   var other = newDag()
 
   other.append('zuckerberg', function (_, node) {
-    writeSomeBros(dg, function () {
-      var diff = dg.createDiffStream()
+    writeSomeBros(graph, function () {
+      var diff = graph.createDiffStream()
       diff.pipe(other.createMatchStream()).pipe(diff)
       diff.on('end', function () {
         t.same(diff.since, [node.key], 'contains zuck')
@@ -146,8 +146,8 @@ test('.createDiffStream partial match', function (t) {
   })
 })
 
-function writeSomeBros (dg, cb) {
-  var ws = dg.createWriteStream()
+function writeSomeBros (graph, cb) {
+  var ws = graph.createWriteStream()
   var bros = [new Buffer('zuckerberg'), new Buffer('dorsey'), new Buffer('ballmer')]
   for (var i = 0; i < bros.length; i++) ws.write({value: bros[i]})
   ws.end(cb)
