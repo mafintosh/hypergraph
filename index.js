@@ -76,32 +76,35 @@ DAG.prototype.heads = function (cb) {
   var self = this
   this.ready(function (err) {
     if (err) return cb(err)
-
-    // if there are no heads
-    if (!self.headPaths.length) return cb(null, [])
-
-    var error = null
-    var missing = 0
-    var nodes = []
-
-    for (var i = 0; i < self.headPaths.length; i++) {
-      if (!self.headPaths[i]) continue
-      push(i, self.headPaths[i])
-    }
-
-    function push (path, seq) {
-      missing++
-      getPathNode(self, path, seq, function (err, node) {
-        if (err) error = err
-        else nodes.push(node)
-        if (--missing) return
-        if (error) return cb(error)
-        var heads = nodes.sort(compareNodes)
-        debug('heads', heads)
-        cb(null, heads)
-      })
-    }
+    _heads(self, cb)
   })
+}
+
+function _heads (self, cb) {
+  // if there are no heads
+  if (!self.headPaths.length) return cb(null, [])
+
+  var error = null
+  var missing = 0
+  var nodes = []
+
+  for (var i = 0; i < self.headPaths.length; i++) {
+    if (!self.headPaths[i]) continue
+    push(i, self.headPaths[i])
+  }
+
+  function push (path, seq) {
+    missing++
+    getPathNode(self, path, seq, function (err, node) {
+      if (err) error = err
+      else nodes.push(node)
+      if (--missing) return
+      if (error) return cb(error)
+      var heads = nodes.sort(compareNodes)
+      debug('heads', heads)
+      cb(null, heads)
+    })
+  }
 }
 
 DAG.prototype.createReadStream = function (opts) {

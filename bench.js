@@ -25,7 +25,6 @@ function buildWriteMemdb () {
   }
 }
 
-
 var run = bench([
   buildAppend(),
   buildWriteMemdb()
