@@ -400,19 +400,11 @@ function toKey (key) {
 function getNodes (dag, links, cb) {
   if (!links.length) return cb(null, [])
 
-  var nodes = new Array(links.length)
-  var error = null
-  var missing = nodes.length
+  dag._parallel(dag, _dagGet, links, cb)
+}
 
-  for (var i = 0; i < links.length; i++) dag.get(links[i], add)
-
-  function add (err, node) {
-    if (err) error = err
-    nodes[--missing] = node
-    if (missing) return
-    if (error) cb(error)
-    else cb(null, nodes)
-  }
+function _dagGet (link, cb) {
+  this.get(link, cb)
 }
 
 function addHeads (dag, heads, cb) {
