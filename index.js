@@ -10,6 +10,7 @@ var thunky = require('thunky')
 var varint = require('varint')
 var ids = require('numeric-id-map')
 var debug = require('debug')('hypergraph')
+var parallel = require('fastparallel')
 
 module.exports = DAG
 
@@ -23,6 +24,7 @@ function DAG (db) {
   this.inserting = ids()
 
   this.ready = thunky(init.bind(null, this))
+  this._parallel = parallel()
 }
 
 DAG.prototype.count = function (opts, cb) {
@@ -80,31 +82,40 @@ DAG.prototype.heads = function (cb) {
   })
 }
 
+function HeadPath (path, seq) {
+  this.path = path
+  this.seq = seq
+}
+
+function HeadsState (self, cb) {
+  this.self = self
+  this.cb = cb
+}
+
 function _heads (self, cb) {
   // if there are no heads
   if (!self.headPaths.length) return cb(null, [])
 
-  var error = null
-  var missing = 0
-  var nodes = []
+  var paths = []
 
   for (var i = 0; i < self.headPaths.length; i++) {
     if (!self.headPaths[i]) continue
-    push(i, self.headPaths[i])
+    paths.push(new HeadPath(i, self.headPaths[i]))
   }
 
-  function push (path, seq) {
-    missing++
-    getPathNode(self, path, seq, function (err, node) {
-      if (err) error = err
-      else nodes.push(node)
-      if (--missing) return
-      if (error) return cb(error)
-      var heads = nodes.sort(compareNodes)
-      debug('heads', heads)
-      cb(null, heads)
-    })
-  }
+  self._parallel(new HeadsState(self, cb), _push, paths, _pushDone)
+}
+
+function _push (headPath, cb) {
+  getPathNode(this.self, headPath.path, headPath.seq, cb)
+}
+
+function _pushDone (err, nodes) {
+  var cb = this.cb
+  if (err) return cb(err)
+  var heads = nodes.sort(compareNodes)
+  debug('heads', heads)
+  cb(null, heads)
 }
 
 DAG.prototype.createReadStream = function (opts) {
