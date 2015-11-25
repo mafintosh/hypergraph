@@ -13,6 +13,23 @@ function buildAppend () {
   }
 }
 
+function buildAppendStream () {
+  var dag = DAG(memdb())
+  var stream = dag.createAppendStream()
+  var next = 1
+
+  return appendStream
+
+  function appendStream (done) {
+    var result = stream.write(next++ + '')
+    if (!result) {
+      stream.once('drain', done)
+    } else {
+      done()
+    }
+  }
+}
+
 function buildWriteMemdb () {
   var db = memdb()
   var next = 1
@@ -27,6 +44,7 @@ function buildWriteMemdb () {
 
 var run = bench([
   buildAppend(),
+  buildAppendStream(),
   buildWriteMemdb()
 ], 10000)
 
