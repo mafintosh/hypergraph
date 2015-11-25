@@ -165,7 +165,7 @@ DAG.prototype.add = function (links, value, cb) {
 
   this.ready(function ready (err) {
     if (err) return cb(err)
-    getNodes(self, node.links, function (err, links) {
+    getNodes(self, node.links, function gotNodes (err, links) {
       if (err) return cb(err)
 
       // fast track - if a link was a head we know this is a new node
@@ -181,7 +181,7 @@ DAG.prototype.add = function (links, value, cb) {
         if (self.inserting.list.indexOf(key) > -1) return setTimeout(ready, 100)
         id = self.inserting.add(key)
 
-        updateNode(self, node, links, function (err, cache) {
+        updateNode(self, node, links, function nodeUpdated (err, cache) {
           if (err) return done(err)
           self.db.batch(createBatch(key, node, cache), done)
         })
@@ -427,9 +427,9 @@ function addHeads (dag, heads, cb) {
 
   function checkNode (path, seq, cb) {
     var paths = []
-    getPathNode(dag, path, seq, function (err, node) {
+    getPathNode(dag, path, seq, function addHeadsGetPathNode (err, node) {
       if (err) return cb(err)
-      addPaths(dag, node, paths, function (err) {
+      addPaths(dag, node, paths, function addPathsGetPathNode (err) {
         if (err) return cb(err)
         for (var i = 0; i < paths.length; i++) {
           if (paths[i] === dag.paths[i] && path !== i) heads[i] = 0
