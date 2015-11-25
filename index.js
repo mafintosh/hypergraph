@@ -10,6 +10,7 @@ var thunky = require('thunky')
 var varint = require('varint')
 var ids = require('numeric-id-map')
 var debug = require('debug')('hypergraph')
+var parallel = require('fastparallel')
 
 module.exports = DAG
 
@@ -23,6 +24,7 @@ function DAG (db) {
   this.inserting = ids()
 
   this.ready = thunky(init.bind(null, this))
+  this._parallel = parallel()
 }
 
 DAG.prototype.count = function (opts, cb) {
@@ -76,32 +78,44 @@ DAG.prototype.heads = function (cb) {
   var self = this
   this.ready(function (err) {
     if (err) return cb(err)
-
-    // if there are no heads
-    if (!self.headPaths.length) return cb(null, [])
-
-    var error = null
-    var missing = 0
-    var nodes = []
-
-    for (var i = 0; i < self.headPaths.length; i++) {
-      if (!self.headPaths[i]) continue
-      push(i, self.headPaths[i])
-    }
-
-    function push (path, seq) {
-      missing++
-      getPathNode(self, path, seq, function (err, node) {
-        if (err) error = err
-        else nodes.push(node)
-        if (--missing) return
-        if (error) return cb(error)
-        var heads = nodes.sort(compareNodes)
-        debug('heads', heads)
-        cb(null, heads)
-      })
-    }
+    _heads(self, cb)
   })
+}
+
+function HeadPath (path, seq) {
+  this.path = path
+  this.seq = seq
+}
+
+function HeadsState (self, cb) {
+  this.self = self
+  this.cb = cb
+}
+
+function _heads (self, cb) {
+  // if there are no heads
+  if (!self.headPaths.length) return cb(null, [])
+
+  var paths = []
+
+  for (var i = 0; i < self.headPaths.length; i++) {
+    if (!self.headPaths[i]) continue
+    paths.push(new HeadPath(i, self.headPaths[i]))
+  }
+
+  self._parallel(new HeadsState(self, cb), _push, paths, _pushDone)
+}
+
+function _push (headPath, cb) {
+  getPathNode(this.self, headPath.path, headPath.seq, cb)
+}
+
+function _pushDone (err, nodes) {
+  var cb = this.cb
+  if (err) return cb(err)
+  var heads = nodes.sort(compareNodes)
+  debug('heads', heads)
+  cb(null, heads)
 }
 
 DAG.prototype.createReadStream = function (opts) {
@@ -151,7 +165,7 @@ DAG.prototype.add = function (links, value, cb) {
 
   this.ready(function ready (err) {
     if (err) return cb(err)
-    getNodes(self, node.links, function (err, links) {
+    getNodes(self, node.links, function gotNodes (err, links) {
       if (err) return cb(err)
 
       // fast track - if a link was a head we know this is a new node
@@ -167,7 +181,7 @@ DAG.prototype.add = function (links, value, cb) {
         if (self.inserting.list.indexOf(key) > -1) return setTimeout(ready, 100)
         id = self.inserting.add(key)
 
-        updateNode(self, node, links, function (err, cache) {
+        updateNode(self, node, links, function nodeUpdated (err, cache) {
           if (err) return done(err)
           self.db.batch(createBatch(key, node, cache), done)
         })
@@ -386,19 +400,11 @@ function toKey (key) {
 function getNodes (dag, links, cb) {
   if (!links.length) return cb(null, [])
 
-  var nodes = new Array(links.length)
-  var error = null
-  var missing = nodes.length
+  dag._parallel(dag, _dagGet, links, cb)
+}
 
-  for (var i = 0; i < links.length; i++) dag.get(links[i], add)
-
-  function add (err, node) {
-    if (err) error = err
-    nodes[--missing] = node
-    if (missing) return
-    if (error) cb(error)
-    else cb(null, nodes)
-  }
+function _dagGet (link, cb) {
+  this.get(link, cb)
 }
 
 function addHeads (dag, heads, cb) {
@@ -421,9 +427,9 @@ function addHeads (dag, heads, cb) {
 
   function checkNode (path, seq, cb) {
     var paths = []
-    getPathNode(dag, path, seq, function (err, node) {
+    getPathNode(dag, path, seq, function addHeadsGetPathNode (err, node) {
       if (err) return cb(err)
-      addPaths(dag, node, paths, function (err) {
+      addPaths(dag, node, paths, function addPathsGetPathNode (err) {
         if (err) return cb(err)
         for (var i = 0; i < paths.length; i++) {
           if (paths[i] === dag.paths[i] && path !== i) heads[i] = 0
